@@ -2,11 +2,10 @@
   "name": "react-mention-div",
   "version": "1.0.0",
   "description": "React component for user mention",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "react-scripts start",
-    "build": "react-scripts build"
+    "build": "./node_modules/.bin/babel src --out-file index.js"
   },
   "repository": {
     "type": "git",
@@ -19,15 +18,6 @@
     "url": "https://github.com/jsmine-dot/react-mention-div/issues"
   },
   "homepage": "https://github.com/jsmine-dot/react-mention-div#readme",
-  "dependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-scripts": "^4.0.3"
-  },
-  "devDependencies": {
-    "@babel/preset-env": "^7.14.4",
-    "@babel/preset-react": "^7.13.13"
-  },
   "files": [
     "dist"
   ],
@@ -46,5 +36,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.14.3",
+    "@babel/core": "^7.14.3",
+    "@babel/preset-env": "^7.14.4",
+    "@babel/preset-react": "^7.13.13"
   }
 }
