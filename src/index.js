@@ -1,6 +1,6 @@
 import React,{useState, useRef} from 'react';
 
-export default function ({resize, className, options,}) {
+export default function ({resize, className, options, trigger, onChange, ListingUi}) {
 
     const [showOptions, setShowOptiona] = useState(false);
     const [optionListPosition, setOptionListPosition] = useState(null);
@@ -21,12 +21,12 @@ export default function ({resize, className, options,}) {
     function keyUp(event) {
         checkFocusedCell();
         out();
-        if(event.key === '@'){
+        if(event.key === trigger){
             split(event);
         }else if(event.key === ' ' ){
             const focusedNode = window.getSelection().focusNode;
             const textContent = focusedNode.textContent;
-            if(!textContent.startsWith('@')){
+            if(!textContent.startsWith(trigger)){
                 return;
             }else {
                 const textContent = focusedNode.textContent;
@@ -44,7 +44,7 @@ export default function ({resize, className, options,}) {
     function checkFocusedCell() {
         const focusedNode = window.getSelection().focusNode;
         const textContent = focusedNode.textContent;
-        if(textContent.startsWith('@')){
+        if(textContent.startsWith(trigger)){
             setShowOptiona(true);
             const rect = focusedNode.parentNode.getBoundingClientRect();
             setOptionListPosition({top:rect.y+rect.height,left:rect.x});
@@ -57,7 +57,7 @@ export default function ({resize, className, options,}) {
     function split() {
         const focusedNode = window.getSelection().focusNode;
         const textContent = focusedNode.textContent;
-        const splitAt = [...textContent.matchAll('@')].map(item =>item.index);
+        const splitAt = [...textContent.matchAll(trigger)].map(item =>item.index);
         if(splitAt.length === 0){
             return;
         }
@@ -76,7 +76,7 @@ export default function ({resize, className, options,}) {
         newContents.forEach(content=>{
             const span = document.createElement('span');
             span.innerText = content;
-            if(content.startsWith('@')){
+            if(content.startsWith(trigger)){
                 span.classList.add('blue');
             }
             atNode.insertAdjacentElement('afterEnd', span);
@@ -85,8 +85,8 @@ export default function ({resize, className, options,}) {
         setCursor(atNode);
     }
     function dictSetting(option) {
-        optionsAt.textContent = '@'+option.name;
-        mentionDict['@'+option.name] = option;
+        optionsAt.textContent = trigger+option.name;
+        mentionDict[trigger+option.name] = option;
     }
     function out() {
         const outObject = {};
@@ -101,11 +101,11 @@ export default function ({resize, className, options,}) {
         if(optionsAt){
             outObject.searchKey = optionsAt.innerText;
         }
-        console.log(outObject);
+        onChange(outObject);
     }
     function OptionsUi({style}) {
         return(<div style={style} className={'options-list-holder'}>
-            {options.map(option=><li onClick={()=>dictSetting(option)}>{option.name}</li>)}
+            {options.map(option=><div onClick={()=>dictSetting(option)}><ListingUi option={option}/></div>)}
         </div>)
     }
     return(<div>
@@ -113,5 +113,3 @@ export default function ({resize, className, options,}) {
         {showOptions && optionListPosition?<OptionsUi style={{position:'fixed', top: optionListPosition.top, left:optionListPosition.left}}/>:null}
     </div>)
 }
-
-//add debounce
