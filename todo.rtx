@@ -1,0 +1,25 @@
+//ToDO feature
+//add debounce :done
+//add support for trigger character :Done
+//add support for regex catching for trigger
+//add support for custom listing ui :Done
+//add support for navigation key in options list
+//add test
+//add example
+//git boat to run test 
+
+
+//ToDo issues
+//on paste while empty
+//space after trigger char and few other char, paste
+//search key not being sent across: handled
+//crash on resizing: handled
+//character detection on input: handled
+//trigger input in empty box
+//on delete last character: handled
+//on cut all : handled
+//detecting respective parent node for each action: handled
+//command z after deleting multiple times in blank div
+//starting with tag
+
+//
