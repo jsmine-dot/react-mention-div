@@ -9,6 +9,8 @@ exports.default = _default;
 
 var _react = _interopRequireWildcard(require("react"));
 
+var _utils = require("./utils");
+
 function _getRequireWildcardCache(nodeInterop) { if (typeof WeakMap !== "function") return null; var cacheBabelInterop = new WeakMap(); var cacheNodeInterop = new WeakMap(); return (_getRequireWildcardCache = function _getRequireWildcardCache(nodeInterop) { return nodeInterop ? cacheNodeInterop : cacheBabelInterop; })(nodeInterop); }
 
 function _interopRequireWildcard(obj, nodeInterop) { if (!nodeInterop && obj && obj.__esModule) { return obj; } if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(nodeInterop); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
@@ -39,18 +41,23 @@ function _iterableToArrayLimit(arr, i) { var _i = arr && (typeof Symbol !== "und
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
+var wrapper = Object.freeze({
+  'parent-wrapper': 'parent-wrapper',
+  'inner-wrapper': 'inner-wrapper'
+});
+
 function _default(_ref) {
-  var resize = _ref.resize,
-      className = _ref.className,
+  var className = _ref.className,
       options = _ref.options,
       trigger = _ref.trigger,
       onChange = _ref.onChange,
-      ListingUi = _ref.ListingUi;
+      ListingUi = _ref.ListingUi,
+      optionsListClass = _ref.optionsListClass;
 
   var _useState = (0, _react.useState)(false),
       _useState2 = _slicedToArray(_useState, 2),
       showOptions = _useState2[0],
-      setShowOptiona = _useState2[1];
+      setShowOption = _useState2[1];
 
   var _useState3 = (0, _react.useState)(null),
       _useState4 = _slicedToArray(_useState3, 2),
@@ -68,12 +75,12 @@ function _default(_ref) {
       setOptionsAt = _useState8[1];
 
   var inputBox = (0, _react.useRef)();
+  var keyUp_deBounce = (0, _utils.deBounce)(keyUp, 100);
 
-  function setCursor(node) {
-    var position = node.innerText.length;
+  function setCursor(node, at) {
     var range = document.createRange();
-    range.setStart(node, position);
-    range.setEnd(node, position);
+    range.setStart(node, at);
+    range.setEnd(node, at);
     var selection = window.getSelection();
     selection.removeAllRanges();
     range.collapse(true);
@@ -81,45 +88,70 @@ function _default(_ref) {
   }
 
   function keyUp(event) {
-    checkFocusedCell();
-    out();
+    var selection = window.getSelection();
+    var focusOffset = selection.focusOffset;
+    var focusedNode = selection.focusNode;
+    var textContent = focusedNode.textContent;
 
-    if (event.key === trigger) {
+    if (event.key === "Backspace") {
+      wrapInSpan();
+    }
+
+    if (textContent.includes(trigger) && !textContent.startsWith(trigger)) {
       split(event);
     } else if (event.key === ' ') {
-      var focusedNode = window.getSelection().focusNode;
-      var textContent = focusedNode.textContent;
-
-      if (!textContent.startsWith(trigger)) {
-        return;
-      } else {
+      if (!textContent.startsWith(trigger)) {} else {
         var _textContent = focusedNode.textContent;
-        focusedNode.textContent = _textContent.slice(0, _textContent.length - 1);
-        var span = document.createElement('span');
-        span.innerHTML = "&nbsp;";
-        focusedNode.parentNode.insertAdjacentElement('afterEnd', span);
-        setCursor(span);
+        focusedNode.textContent = _textContent.slice(0, focusOffset - 1);
+        var span = generateInnerWrapper();
+        span.innerHTML = _textContent.slice(focusOffset - 1, _textContent.length);
+        var parentNode = getParentNode(focusedNode, "wrapperType", wrapper["inner-wrapper"]);
+        parentNode.insertAdjacentElement('afterEnd', span);
+        setCursor(span, 1);
       }
-    } else {
+    }
+
+    checkFocusedCell();
+    out();
+  }
+
+  function wrapInSpan() {
+    var focusedNode = window.getSelection().focusNode;
+
+    if (focusedNode.nodeName == "#text") {
       return;
+    }
+
+    if (focusedNode.getAttribute('wrapperType') == wrapper["parent-wrapper"]) {
+      var _wrapper = generateInnerWrapper();
+
+      var child = document.createElement('br');
+
+      _wrapper.appendChild(child);
+
+      focusedNode.innerHTML = null;
+      focusedNode.appendChild(_wrapper);
     }
   }
 
   function checkFocusedCell() {
     var focusedNode = window.getSelection().focusNode;
-    var textContent = focusedNode.textContent;
 
-    if (textContent.startsWith(trigger)) {
-      setShowOptiona(true);
-      var rect = focusedNode.parentNode.getBoundingClientRect();
-      setOptionListPosition({
-        top: rect.y + rect.height,
-        left: rect.x
+    if (focusedNode && focusedNode.textContent.startsWith(trigger)) {
+      setShowOption(true);
+      var parentNode = getParentNode(focusedNode, "wrapperType", wrapper["inner-wrapper"]);
+      var rect = parentNode.getBoundingClientRect();
+      setOptionListPosition(function () {
+        return {
+          top: rect.y + rect.height,
+          left: rect.x
+        };
       });
-      setOptionsAt(focusedNode);
+      setOptionsAt(function () {
+        return getParentNode(focusedNode, "wrapperType", wrapper["inner-wrapper"]);
+      });
     } else {
-      setShowOptiona(false);
-      setOptionsAt(null);
+      clearOptionsDisplay();
     }
   }
 
@@ -140,42 +172,39 @@ function _default(_ref) {
 
     for (var i = 0; i < splitAt.length; i++) {
       var textContentPart = textContent.slice(splitAt[i], splitAt[i + 1]);
-
-      if (textContentPart.startsWith('@ ')) {
-        newContents.push(textContentPart[0]);
-        newContents.push(textContentPart.slice(1, textContentPart.length));
-      } else {
-        newContents.push(textContentPart);
-      }
+      newContents.push(textContentPart);
     }
 
-    var atNode = focusedNode.parentNode;
+    var atNode = getParentNode(focusedNode, "wrapperType", wrapper["inner-wrapper"]);
     newContents.forEach(function (content) {
-      var span = document.createElement('span');
-      span.innerText = content;
+      var style = {};
 
       if (content.startsWith(trigger)) {
-        span.classList.add('blue');
+        style.color = '#0E85E8';
       }
 
-      atNode.insertAdjacentElement('afterEnd', span);
-      atNode = span;
+      appendInnerWrapper(atNode, content, style);
     });
-    setCursor(atNode);
   }
 
   function dictSetting(option) {
+    appendInnerWrapper(optionsAt, "&nbsp;");
     optionsAt.textContent = trigger + option.name;
     mentionDict[trigger + option.name] = option;
+    clearOptionsDisplay();
+    out();
   }
 
   function out() {
+    var focusedNode = window.getSelection().focusNode;
     var outObject = {};
     outObject.value = inputBox.current.innerText;
     var mentions = [];
     Object.keys(mentionDict).forEach(function (mentionKey) {
       if (outObject.value.includes(mentionKey)) {
-        mentions.push(_objectSpread(_objectSpread({}, mentionDict[mentionKey]), {}, {
+        mentions.push(_objectSpread(_objectSpread({
+          mentionKey: mentionKey
+        }, mentionDict[mentionKey]), {}, {
           start: outObject.value.indexOf(mentionKey),
           end: outObject.value.indexOf(mentionKey) + mentionKey.length
         }));
@@ -184,17 +213,35 @@ function _default(_ref) {
     outObject.mentions = mentions;
 
     if (optionsAt) {
-      outObject.searchKey = optionsAt.innerText;
+      outObject.searchKey = optionsAt.textContent.slice(1);
     }
 
     onChange(outObject);
+  }
+
+  function appendInnerWrapper(atNode, content) {
+    var style = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var span = generateInnerWrapper();
+    Object.keys(style).forEach(function (styleKey) {
+      span.style[styleKey] = style[styleKey];
+    });
+    span.innerHTML = content;
+    atNode.insertAdjacentElement('afterEnd', span);
+    setCursor(span.childNodes[0], span.innerText.length);
+  }
+
+  function clearOptionsDisplay() {
+    setShowOption(function () {
+      return false;
+    });
+    setOptionsAt(null);
   }
 
   function OptionsUi(_ref2) {
     var style = _ref2.style;
     return /*#__PURE__*/_react.default.createElement("div", {
       style: style,
-      className: 'options-list-holder'
+      className: optionsListClass
     }, options.map(function (option) {
       return /*#__PURE__*/_react.default.createElement("div", {
         onClick: function onClick() {
@@ -206,27 +253,54 @@ function _default(_ref) {
     }));
   }
 
+  function generateInnerWrapper() {
+    var element = document.createElement('span');
+    element.setAttribute('wrapperType', wrapper['inner-wrapper']);
+    return element;
+  }
+
+  function getParentNode(currentNode, attribute, attributeValue) {
+    var count = 0;
+
+    while (true) {
+      if (currentNode.nodeName == "BODY" || count >= 5) {
+        currentNode = null;
+        break;
+      } else if (currentNode.getAttribute && currentNode.getAttribute(attribute) == attributeValue) {
+        break;
+      } else {
+        currentNode = currentNode.parentNode;
+        count++;
+      }
+    }
+
+    return currentNode;
+  }
+
   return /*#__PURE__*/_react.default.createElement("div", null, /*#__PURE__*/_react.default.createElement("div", {
+    wrapperType: wrapper['parent-wrapper'],
     ref: inputBox,
     className: className,
     contentEditable: true,
-    style: {
-      resize: resize
-    },
     onClick: function onClick() {
       return setTimeout(checkFocusedCell, 0);
     },
-    onPaste: function onPaste(event) {
+    onCut: function onCut() {
       return setTimeout(function () {
-        return split(event);
+        return wrapInSpan();
+      }, 0);
+    },
+    onPaste: function onPaste() {
+      return setTimeout(function () {
+        return split();
       }, 0);
     },
     onKeyUp: function onKeyUp(event) {
-      return setTimeout(function () {
-        return keyUp(event);
-      }, 0);
+      return keyUp_deBounce(event);
     }
-  }, /*#__PURE__*/_react.default.createElement("span", null, /*#__PURE__*/_react.default.createElement("br", null))), showOptions && optionListPosition ? /*#__PURE__*/_react.default.createElement(OptionsUi, {
+  }, /*#__PURE__*/_react.default.createElement("span", {
+    wrapperType: wrapper['inner-wrapper']
+  }, /*#__PURE__*/_react.default.createElement("br", null))), showOptions && optionListPosition ? /*#__PURE__*/_react.default.createElement(OptionsUi, {
     style: {
       position: 'fixed',
       top: optionListPosition.top,
@@ -234,3 +308,4 @@ function _default(_ref) {
     }
   }) : null);
 }
+//# sourceMappingURL=index.js.map
