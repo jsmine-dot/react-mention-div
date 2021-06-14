@@ -4,7 +4,7 @@ React component for user mention
 ## Getting started
 install the react-mention-div via npm
 ```
-npm i react-mention-div
+npm i @jsmine/react-mention-div
 ```
 
 import it in your file

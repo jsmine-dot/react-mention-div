@@ -7,10 +7,12 @@
 //add test
 //add example
 //git boat to run test 
+//keyup ignore list: done
+//placeholder
 
 
 //ToDo issues
-//on paste while empty
+//on paste, with trigger, while empty
 //space after trigger char and few other char, paste
 //search key not being sent across: handled
 //crash on resizing: handled
@@ -21,5 +23,4 @@
 //detecting respective parent node for each action: handled
 //command z after deleting multiple times in blank div
 //starting with tag
-
 //

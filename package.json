@@ -1,6 +1,7 @@
 {
-  "name": "react-mention-div",
-  "version": "1.0.0-beta.2",
+  "name": "@jsmine/react-mention-div",
+  "publishConfig": {"access": "public"},
+  "version": "1.0.0-beta.5",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
@@ -19,6 +20,12 @@
   "homepage": "https://github.com/jsmine-dot/react-mention-div#readme",
   "files": [
     "dist"
+  ],
+  "keywords":[
+    "react",
+    "mention",
+    "tag",
+    "editable"
   ],
   "peerDependencies": {
     "react": "^17.0.2",
