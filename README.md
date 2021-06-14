@@ -19,6 +19,7 @@ import it in your file
       	trigger={'@'} 
       	className={'class for input box'} 
       	optionsListClass={'class for options list'}
-      	options={[{value:'ABCD', id:1},{value:'XYZ', id:2}]}
+      	optionDisplayKey={'name'}
+      	options={[{name:'ABCD', id:1},{name:'XYZ', id:2}]}
       />
 ```

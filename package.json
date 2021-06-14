@@ -1,12 +1,13 @@
 {
   "name": "@jsmine/react-mention-div",
   "publishConfig": {"access": "public"},
-  "version": "1.0.0-beta.5",
+  "version": "1.0.0-beta.6",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "babel ./src --out-dir ./dist --source-maps --copy-files"
+    "build": "babel ./src --out-dir ./dist --source-maps --copy-files",
+    "build:production":"babel ./src --out-dir ./dist"
   },
   "repository": {
     "type": "git",
