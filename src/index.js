@@ -1,8 +1,22 @@
 import React,{useState, useRef, useEffect, useCallback} from 'react';
 import {deBounce} from "./utils";
 
-const wrapper = Object.freeze({'parent-wrapper':'parent-wrapper', 'inner-wrapper':'inner-wrapper'})
-export default function ({className, options, trigger, onChange, ListingUi, optionsListClass}) {
+const wrapper = Object.freeze({'parent-wrapper':'parent-wrapper', 'inner-wrapper':'inner-wrapper'});
+const igoneKeyList = [
+    "escape",
+    "shiftleft",
+    "controlleft",
+    "altleft",
+    "metaleft",
+    "metaright",
+    "altright",
+    "arrowleft",
+    "arrowup",
+    "arrowdown",
+    "arrowright",
+    "shiftright"
+];
+export default function ({className, options=[], trigger='@', onChange=()=>{}, optionsListClass, triggerColor='#0E85E8', optionDisplayKey = 'id', ListingUi=null}) {
     const [showOptions, setShowOption] = useState(false);
     const [optionListPosition, setOptionListPosition] = useState(null);
     const [mentionDict, setMentionDict] = useState({});
@@ -20,33 +34,31 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         selection.addRange(range)
     }
     function keyUp(event) {
+        if(igoneKeyList.includes(event.code.toLowerCase())){
+            return;
+        }
         const selection = window.getSelection();
         const focusOffset = selection.focusOffset;
         const focusedNode = selection.focusNode;
         const textContent = focusedNode.textContent;
-        if(event.key === "Backspace"){
-            wrapInSpan()
+        if(event.code.toLowerCase() === "backspace"){
+            spanIn();
         }
-        
         if(textContent.includes(trigger) && !textContent.startsWith(trigger)){
             split(event);
-        }else if(event.key === ' ' ){ 
-            if(!textContent.startsWith(trigger)){
-                
-            }else {
+        }else if(event.code.toLowerCase() === "space" && textContent.startsWith(trigger)){ 
                 const textContent = focusedNode.textContent;
                 focusedNode.textContent = textContent.slice(0,focusOffset - 1);
                 const span = generateInnerWrapper();
                 span.innerHTML = textContent.slice(focusOffset - 1, textContent.length);
-                const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"])
+                const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
                 parentNode.insertAdjacentElement('afterEnd', span);
-                setCursor(span, 1)
-            }
+                setCursor(span, 1);
         }
         checkFocusedCell();
         out();
     }
-    function wrapInSpan(){
+    function spanIn(){
         const focusedNode = window.getSelection().focusNode;
         if(focusedNode.nodeName == "#text"){
             return;
@@ -63,7 +75,7 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         const focusedNode = window.getSelection().focusNode;
         if(focusedNode && focusedNode.textContent.startsWith(trigger)){
             setShowOption(true);
-            const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"])
+            const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
             const rect = parentNode.getBoundingClientRect();
             setOptionListPosition(()=>({top:rect.y+rect.height,left:rect.x}));
             setOptionsAt(()=>getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]));
@@ -87,17 +99,17 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         }
         let atNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
         newContents.forEach(content=>{
-            const style ={}
+            const style ={};
             if(content.startsWith(trigger)){
-                style.color = '#0E85E8'
+                style.color = triggerColor;
             }
-            appendInnerWrapper(atNode,content, style)
+            appendInnerWrapper(atNode,content, style);
         })
     }
     function dictSetting(option) {
         appendInnerWrapper(optionsAt, "&nbsp;");
-        optionsAt.textContent = trigger+option.name;
-        mentionDict[trigger+option.name] = option;
+        optionsAt.textContent = trigger+option[optionDisplayKey];
+        mentionDict[trigger+option[optionDisplayKey]] = option;
         clearOptionsDisplay();
         out();
     }
@@ -108,7 +120,7 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         const mentions = [];
         Object.keys(mentionDict).forEach(mentionKey=>{
             if(outObject.value.includes(mentionKey)){
-                mentions.push({mentionKey,...mentionDict[mentionKey],start:outObject.value.indexOf(mentionKey), end: outObject.value.indexOf(mentionKey) + mentionKey.length})
+                mentions.push({mentionKey,...mentionDict[mentionKey],start:outObject.value.indexOf(mentionKey), end: outObject.value.indexOf(mentionKey) + mentionKey.length});
             }
         })
         outObject.mentions = mentions;
@@ -121,20 +133,14 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         const span = generateInnerWrapper();
         Object.keys(style).forEach(styleKey=>{
             span.style[styleKey] = style[styleKey];
-        })
+        });
         span.innerHTML= content;
-        atNode.insertAdjacentElement('afterEnd', span)
+        atNode.insertAdjacentElement('afterEnd', span);
         setCursor(span.childNodes[0], span.innerText.length);
-
     }
     function clearOptionsDisplay(){
         setShowOption(()=>false);
         setOptionsAt(null);
-    }
-    function OptionsUi({style}) {
-        return(<div style={style} className={optionsListClass}>
-            {options.map(option=><div onClick={()=>dictSetting(option)}><ListingUi option={option}/></div>)}
-        </div>)
     }
     function generateInnerWrapper(){
         const element = document.createElement('span');
@@ -156,8 +162,14 @@ export default function ({className, options, trigger, onChange, ListingUi, opti
         }
         return currentNode;
     }
+    function OptionsUi({style}) {
+
+        return(<div style={style} className={optionsListClass}>
+            {options.map(option=><div onClick={()=>dictSetting(option)}>{ListingUi?<ListingUi option={option}/>:<div>{option[optionDisplayKey]}</div>}</div>)}
+        </div>)
+    }
     return(<div>
-        <div wrapperType={wrapper['parent-wrapper']} ref={inputBox} className={className} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>wrapInSpan(),0)} onPaste={()=>setTimeout(()=>split(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrapperType={wrapper['inner-wrapper']}><br/></span></div>
+        <div wrapperType={wrapper['parent-wrapper']} ref={inputBox} className={className} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>spanIn(),0)} onPaste={()=>setTimeout(()=>split(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrapperType={wrapper['inner-wrapper']}><br/></span></div>
         {showOptions && optionListPosition?<OptionsUi style={{position:'fixed', top: optionListPosition.top, left:optionListPosition.left}}/>:null}
     </div>)
 }
