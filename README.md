@@ -9,7 +9,7 @@ npm i @jsmine/react-mention-div
 
 import it in your file
  ```
- import Mention from 'react-mention-div'
+ import Mention from '@jsmine/react-mention-div'
  ```
  use it:
 ```javascript
