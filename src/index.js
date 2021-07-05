@@ -23,7 +23,7 @@ function deBounce(func, time) {
         timer = setTimeout(()=>func(...arguments),time);
     }
 }
-export default function ({className, options=[], trigger='@', onChange=()=>{}, optionsListClass, triggerColor='#0E85E8', optionDisplayKey = 'id', ListingUi=null}) {
+export default function ({className, style={}, options=[], trigger='@', onChange=()=>{}, optionsListClass, triggerColor='#0E85E8', optionDisplayKey = 'id', ListingUi=null}) {
     const [showOptions, setShowOption] = useState(false);
     const [optionListPosition, setOptionListPosition] = useState(null);
     const [mentionDict, setMentionDict] = useState({});
@@ -90,6 +90,25 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         }else {
             clearOptionsDisplay();
         }
+    }
+    function paste(){
+        const focusedNode = window.getSelection().focusNode;
+        const textContent = focusedNode.textContent;
+        const innerWrapper = getParentNode(focusedNode,"wrprTy",inrWrpr);
+        if(innerWrapper){
+            for(let child of innerWrapper.childNodes){
+                if(child.nodeName === "BR"){
+                    innerWrapper.removeChild(child);
+                }
+            }
+        }else{
+            let inrWrapper = generateInnerWrapper();
+            const parentWrapper = getParentNode(focusedNode,"wrprTy",prntWrpr);
+            inrWrapper.appendChild(focusedNode);
+            parentWrapper.appendChild(inrWrapper);
+            setCursor(focusedNode,textContent.length)
+        }
+        split();
     }
     function split() {
         const focusedNode = window.getSelection().focusNode;
@@ -175,7 +194,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         </div>)
     }
     return(<div>
-        <div wrprTy={prntWrpr} ref={inputBox} className={className} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>spanIn(),0)} onPaste={()=>setTimeout(()=>split(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrprTy={inrWrpr}><br/></span></div>
+        <div wrprTy={prntWrpr} ref={inputBox} className={className} style={{padding:"2px",...style}} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>spanIn(),0)} onPaste={()=>setTimeout(()=>paste(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrprTy={inrWrpr}><br/></span></div>
         {showOptions && optionListPosition?<OptionsUi style={{position:'fixed', top: optionListPosition.top, left:optionListPosition.left}}/>:null}
     </div>)
 }

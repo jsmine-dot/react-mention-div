@@ -9,6 +9,7 @@
 //git boat to run test 
 //keyup ignore list: done
 //placeholder
+//no result message
 
 
 //ToDo issues
@@ -23,4 +24,6 @@
 //detecting respective parent node for each action: handled
 //command z after deleting multiple times in blank div
 //starting with tag
-//
+//after pasting <br> is appearing
+//safari, crashing on empty option list after pasting
+

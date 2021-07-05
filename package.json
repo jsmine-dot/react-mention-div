@@ -1,13 +1,15 @@
 {
   "name": "@jsmine/react-mention-div",
-  "publishConfig": {"access": "public"},
-  "version": "1.0.0-beta.8",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "1.0.2",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "babel ./src --out-dir ./dist --source-maps --copy-files",
-    "build:production":"babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments"
+    "build:production": "babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments"
   },
   "repository": {
     "type": "git",
@@ -22,10 +24,14 @@
   "files": [
     "dist"
   ],
-  "keywords":[
+  "keywords": [
     "react",
+    "component",
     "mention",
     "tag",
+    "editable",
+    "twitter",
+    "twttr",
     "editable"
   ],
   "peerDependencies": {
