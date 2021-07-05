@@ -1,22 +1,29 @@
-import React,{useState, useRef, useEffect, useCallback} from 'react';
-import {deBounce} from "./utils";
-
-const wrapper = Object.freeze({'parent-wrapper':'parent-wrapper', 'inner-wrapper':'inner-wrapper'});
+import React,{useState, useRef} from 'react';
+const prntWrpr = 'prntWrpr';
+const inrWrpr = 'inrWrpr';
 const igoneKeyList = [
-    "escape",
-    "shiftleft",
-    "controlleft",
-    "altleft",
-    "metaleft",
-    "metaright",
-    "altright",
-    "arrowleft",
-    "arrowup",
-    "arrowdown",
-    "arrowright",
-    "shiftright"
+    27,//"escape"
+    16,//"shiftleft","shiftright"
+    17,//"controlleft"
+    18,//"altleft", "altright"
+    91,//"metaleft"
+    93,//"metaright"
+    37,//"arrowleft"
+    38,//"arrowup"
+    40,//"arrowdown"
+    39,//"arrowright"
+    
 ];
-export default function ({className, options=[], trigger='@', onChange=()=>{}, optionsListClass, triggerColor='#0E85E8', optionDisplayKey = 'id', ListingUi=null}) {
+function deBounce(func, time) {
+    let timer = null;
+    return function(){
+        if(timer){
+            clearTimeout(timer);
+        }
+        timer = setTimeout(()=>func(...arguments),time);
+    }
+}
+export default function ({className, style={}, options=[], trigger='@', onChange=()=>{}, optionsListClass, triggerColor='#0E85E8', optionDisplayKey = 'id', ListingUi=null}) {
     const [showOptions, setShowOption] = useState(false);
     const [optionListPosition, setOptionListPosition] = useState(null);
     const [mentionDict, setMentionDict] = useState({});
@@ -34,7 +41,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         selection.addRange(range)
     }
     function keyUp(event) {
-        if(igoneKeyList.includes(event.code.toLowerCase())){
+        if(igoneKeyList.includes(event.keyCode)){
             return;
         }
         const selection = window.getSelection();
@@ -51,7 +58,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
                 focusedNode.textContent = textContent.slice(0,focusOffset - 1);
                 const span = generateInnerWrapper();
                 span.innerHTML = textContent.slice(focusOffset - 1, textContent.length);
-                const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
+                const parentNode = getParentNode(focusedNode,"wrprTy",inrWrpr);
                 parentNode.insertAdjacentElement('afterEnd', span);
                 setCursor(span, 1);
         }
@@ -63,7 +70,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         if(focusedNode.nodeName == "#text"){
             return;
         }
-        if(focusedNode.getAttribute('wrapperType') == wrapper["parent-wrapper"]){
+        if(focusedNode.getAttribute('wrprTy') == prntWrpr){
             const wrapper = generateInnerWrapper();
             const child = document.createElement('br');
             wrapper.appendChild(child);
@@ -75,14 +82,33 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         const focusedNode = window.getSelection().focusNode;
         if(focusedNode && focusedNode.textContent.startsWith(trigger)){
             setShowOption(true);
-            const parentNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
+            const parentNode = getParentNode(focusedNode,"wrprTy",inrWrpr);
             const rect = parentNode.getBoundingClientRect();
             setOptionListPosition(()=>({top:rect.y+rect.height,left:rect.x}));
-            setOptionsAt(()=>getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]));
+            setOptionsAt(()=>getParentNode(focusedNode,"wrprTy",inrWrpr));
             
         }else {
             clearOptionsDisplay();
         }
+    }
+    function paste(){
+        const focusedNode = window.getSelection().focusNode;
+        const textContent = focusedNode.textContent;
+        const innerWrapper = getParentNode(focusedNode,"wrprTy",inrWrpr);
+        if(innerWrapper){
+            for(let child of innerWrapper.childNodes){
+                if(child.nodeName === "BR"){
+                    innerWrapper.removeChild(child);
+                }
+            }
+        }else{
+            let inrWrapper = generateInnerWrapper();
+            const parentWrapper = getParentNode(focusedNode,"wrprTy",prntWrpr);
+            inrWrapper.appendChild(focusedNode);
+            parentWrapper.appendChild(inrWrapper);
+            setCursor(focusedNode,textContent.length)
+        }
+        split();
     }
     function split() {
         const focusedNode = window.getSelection().focusNode;
@@ -97,7 +123,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
             let textContentPart = textContent.slice(splitAt[i],splitAt[i+1]);
             newContents.push(textContentPart);
         }
-        let atNode = getParentNode(focusedNode,"wrapperType",wrapper["inner-wrapper"]);
+        let atNode = getParentNode(focusedNode,"wrprTy",inrWrpr);
         newContents.forEach(content=>{
             const style ={};
             if(content.startsWith(trigger)){
@@ -144,7 +170,7 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
     }
     function generateInnerWrapper(){
         const element = document.createElement('span');
-        element.setAttribute('wrapperType',wrapper['inner-wrapper']);
+        element.setAttribute('wrprTy',inrWrpr);
         return element;
     }
     function getParentNode(currentNode, attribute, attributeValue){
@@ -163,13 +189,12 @@ export default function ({className, options=[], trigger='@', onChange=()=>{}, o
         return currentNode;
     }
     function OptionsUi({style}) {
-
         return(<div style={style} className={optionsListClass}>
             {options.map(option=><div onClick={()=>dictSetting(option)}>{ListingUi?<ListingUi option={option}/>:<div>{option[optionDisplayKey]}</div>}</div>)}
         </div>)
     }
     return(<div>
-        <div wrapperType={wrapper['parent-wrapper']} ref={inputBox} className={className} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>spanIn(),0)} onPaste={()=>setTimeout(()=>split(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrapperType={wrapper['inner-wrapper']}><br/></span></div>
+        <div wrprTy={prntWrpr} ref={inputBox} className={className} style={{padding:"2px",...style}} contentEditable={true} onClick={()=>setTimeout(checkFocusedCell,0)} onCut={()=>setTimeout(()=>spanIn(),0)} onPaste={()=>setTimeout(()=>paste(),0)} onKeyUp={(event)=>keyUp_deBounce(event)}><span wrprTy={inrWrpr}><br/></span></div>
         {showOptions && optionListPosition?<OptionsUi style={{position:'fixed', top: optionListPosition.top, left:optionListPosition.left}}/>:null}
     </div>)
 }
