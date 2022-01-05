@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "babel ./src --out-dir ./dist --source-maps --copy-files",
-    "build:production": "babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments"
+    "build:production": "babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments",
+    "build:type:development": "babel ./src/v2/model.ts --out-dir ./dist --source-maps --copy-files"
   },
   "repository": {
     "type": "git",
@@ -53,8 +54,10 @@
   "devDependencies": {
     "@babel/cli": "^7.14.3",
     "@babel/core": "^7.14.3",
+    "@babel/plugin-transform-typescript": "^7.16.7",
     "@babel/preset-env": "^7.14.4",
     "@babel/preset-react": "^7.13.13",
+    "@babel/preset-typescript": "^7.16.7",
     "babel-preset-minify": "^0.5.1",
     "minify": "^7.0.2"
   }
