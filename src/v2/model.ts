@@ -1,6 +1,20 @@
 import { useState } from "react";
 
 let id = 0;
+const dataLink:DataLink = {first_chunk:id+''};
+const igoneKeyList = [
+    27,//"escape"
+    16,//"shiftleft","shiftright"
+    17,//"controlleft"
+    18,//"altleft", "altright"
+    91,//"metaleft"
+    93,//"metaright"
+    37,//"arrowleft"
+    38,//"arrowup"
+    40,//"arrowdown"
+    39,//"arrowright"
+    
+];
 export default function model<Type extends {options:Array<MentionObject>, onChange:Function, OptionsUI:any, data:Input}>(props:Type){
     const [dataList, setDataList] = useState();
     
@@ -33,8 +47,8 @@ function prepareDataList(data:Input):DataLink{
         }
     }
     sorted_indexDict_keys = Object.keys(indexDict).sort(ascending);
-    const dataLink:DataLink = {first_chunk:(++id).toString()};
     dataLink[id] = {next_chunk:null};
+    dataLink.first_chunk = id+'';
     let last_chunk = dataLink.first_chunk;
     sorted_indexDict_keys.forEach(key=>{
         const chunk = getChunk(raw_content.slice(Number(key),Number(indexDict[key].end_index)),indexDict[key].mention);
@@ -52,4 +66,67 @@ function prepareDataList(data:Input):DataLink{
 
 function ascending(a,b){
     return a == b?0:a > b? 1:0;
+}
+
+function userAction(actionObject) {
+    const {elementId, elementValue, actionKey} = actionObject;
+    if(igoneKeyList.includes(actionKey)){
+        //ignore
+    }else if( actionKey == "@"){
+        //update dataLink
+    }else if(actionKey == "deleteKey"){
+        if(elementValue){
+            dataLink[elementId].raw_content = elementValue;
+        }else if(elementId !== dataLink.first_chunk){
+            removeChunk(elementId);
+        }
+    }else{
+        //update value in chunk
+        dataLink[elementId].raw_content = elementValue;
+    }
+}
+
+function splitChunk(elementId) {
+    const selection = window.getSelection();
+    const focusOffset = selection.focusOffset;
+    const focusedNode = selection.focusNode;
+    const textContent = focusedNode.textContent;
+    const left_chunk = getChunk(textContent.slice(0, focusOffset -1)|| ' ');
+    const middle_chunk = getChunk(textContent.slice(focusOffset, textContent.match(' ').index||textContent.length));
+    const right_chunk = getChunk(textContent.slice(textContent.match(' ').index||textContent.length,textContent.length)||' ');
+    left_chunk.next_chunk = middle_chunk.id;
+    middle_chunk.last_chunk = left_chunk.id;
+    middle_chunk.next_chunk = right_chunk.id
+    const splitted_chunk = dataLink[elementId];
+    const last_chunk = dataLink[splitted_chunk.last_chunk];
+    const next_chunk = dataLink[splitted_chunk.next_chunk];
+    if(last_chunk){
+        last_chunk.next_chunk = left_chunk.id;
+        left_chunk.last_chunk = last_chunk.id;
+    }else{
+        dataLink.first_chunk = left_chunk.id;
+    }
+    if(next_chunk){
+        right_chunk.next_chunk = next_chunk.id;
+        next_chunk.last_chunk = right_chunk.id;
+    }
+    dataLink[left_chunk.id] = left_chunk;
+    dataLink[middle_chunk.id] = middle_chunk;
+    dataLink[right_chunk.id] = right_chunk;
+    delete dataLink[elementId];
+}
+
+function removeChunk(elementId:string) {
+    const chunk_to_remove = dataLink[elementId];
+    const last_chunk = dataLink[chunk_to_remove.last_chunk];
+    const next_chunk = dataLink[chunk_to_remove.next_chunk];
+    if(last_chunk && next_chunk){
+        last_chunk.next_chunk = next_chunk.id;
+        next_chunk.last_chunk = last_chunk.id;
+    }else if(last_chunk){
+        last_chunk.next_chunk = null;
+    }else if(next_chunk){
+        next_chunk.last_chunk = null;
+    }
+    delete dataLink[elementId];
 }
