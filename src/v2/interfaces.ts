@@ -6,8 +6,7 @@ interface Chunk{
     id : string,
     content : string,
     raw_content : string,
-    mention : MentionObject,
-    index : number,
+    mention? : MentionObject,
     last_chunk : string,
     next_chunk : string
 }
