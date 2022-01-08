@@ -1,7 +1,8 @@
-import { useState } from "react";
+import React,{ useState } from "react";
 
 let id = 0;
 const dataLink:DataLink = {first_chunk:id+''};
+const cursorAt = {elementId:null, at:null};
 const igoneKeyList = [
     27,//"escape"
     16,//"shiftleft","shiftright"
@@ -15,10 +16,18 @@ const igoneKeyList = [
     39,//"arrowright"
     
 ];
-export default function model<Type extends {options:Array<MentionObject>, onChange:Function, OptionsUI:any, data:Input}>(props:Type){
-    const [dataList, setDataList] = useState();
-    
-    return 'qwert'
+function setCursor(elementId, at) {
+    const node = document.getElementById(elementId);
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    range.collapse(true)
+    selection.addRange(range)
+}
+export default function model<Type extends {options:Array<MentionObject>, onChange:Function, OptionsUI:any, data:Input}>(props:Type,View):any{
+    return <View/>;
 }
 
 function getChunk(raw_content,mention?): Chunk {
@@ -73,7 +82,7 @@ function userAction(actionObject) {
     if(igoneKeyList.includes(actionKey)){
         //ignore
     }else if( actionKey == "@"){
-        //update dataLink
+        splitChunk(elementId)
     }else if(actionKey == "deleteKey"){
         if(elementValue){
             dataLink[elementId].raw_content = elementValue;
@@ -114,12 +123,17 @@ function splitChunk(elementId) {
     dataLink[middle_chunk.id] = middle_chunk;
     dataLink[right_chunk.id] = right_chunk;
     delete dataLink[elementId];
+    cursorAt.elementId = elementId;
+    cursorAt.at = 1;
+    return;
 }
 
 function removeChunk(elementId:string) {
     const chunk_to_remove = dataLink[elementId];
     const last_chunk = dataLink[chunk_to_remove.last_chunk];
     const next_chunk = dataLink[chunk_to_remove.next_chunk];
+    cursorAt.elementId = next_chunk.id;
+    cursorAt.at = last_chunk.content.length;
     if(last_chunk && next_chunk){
         last_chunk.next_chunk = next_chunk.id;
         next_chunk.last_chunk = last_chunk.id;
@@ -127,6 +141,8 @@ function removeChunk(elementId:string) {
         last_chunk.next_chunk = null;
     }else if(next_chunk){
         next_chunk.last_chunk = null;
+        cursorAt.elementId = next_chunk.id;
+        cursorAt.at = 0;
     }
     delete dataLink[elementId];
 }
