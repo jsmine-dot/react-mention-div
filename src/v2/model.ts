@@ -1,7 +1,7 @@
 import React,{ useState } from "react";
 
 let id = 0;
-const dataLink:DataLink = {first_chunk:id+''};
+const dataLink:DataLink = {first_chunk:id+'',ui_version:0};
 const cursorAt = {elementId:null, at:null};
 const igoneKeyList = [
     27,//"escape"
@@ -26,8 +26,15 @@ function setCursor(elementId, at) {
     range.collapse(true)
     selection.addRange(range)
 }
-export default function model<Type extends {options:Array<MentionObject>, onChange:Function, OptionsUI:any, data:Input}>(props:Type,View):any{
-    return <View/>;
+export default class Model{
+    onChange;
+    userAction;
+    dataLink;
+    constructor(data, callBack){
+        this.onChange = callBack;
+        this.userAction = userAction;
+        this.dataLink = prepareDataList(data);
+    }
 }
 
 function getChunk(raw_content,mention?): Chunk {

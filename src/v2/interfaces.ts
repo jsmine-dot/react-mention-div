@@ -1,6 +1,7 @@
 interface DataLink{
     [index:string]:Chunk|any
     first_chunk : string
+    ui_version:number
 }
 interface Chunk{
     id : string,
@@ -16,7 +17,7 @@ interface MentionObject{
 }
 interface Input{
     raw_content: string,
-    mentions: [ExtendedMentionObject]
+    mentions: Array<ExtendedMentionObject>
 }
 interface ExtendedMentionObject extends MentionObject{
     start_index : number,
