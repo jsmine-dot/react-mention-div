@@ -1,7 +1,8 @@
 import React,{ useState } from "react";
+import { eventType } from "./interfaces";
 
 let id = 0;
-const dataLink:DataLink = {first_chunk:id+'',ui_version:0};
+
 const cursorAt = {elementId:null, at:null};
 const igoneKeyList = [
     27,//"escape"
@@ -30,10 +31,25 @@ export default class Model{
     onChange;
     userAction;
     dataLink;
+    removeChunk;
+    igoneKeyList = [
+        27,//"escape"
+        16,//"shiftleft","shiftright"
+        17,//"controlleft"
+        18,//"altleft", "altright"
+        91,//"metaleft"
+        93,//"metaright"
+        37,//"arrowleft"
+        38,//"arrowup"
+        40,//"arrowdown"
+        39,//"arrowright"
+        
+    ];
     constructor(data, callBack){
         this.onChange = callBack;
-        this.userAction = userAction;
+        this.userAction = userAction.bind(this);
         this.dataLink = prepareDataList(data);
+        this.removeChunk = removeChunk.bind(this);
     }
 }
 
@@ -46,6 +62,7 @@ function getChunk(raw_content,mention?): Chunk {
 }
 
 function prepareDataList(data:Input):DataLink{
+    const dataLink:DataLink = {first_chunk:id+'',ui_version:0};
     const {raw_content, mentions} = data;
     const indexDict = {};
     if(mentions.length > 0){
@@ -85,21 +102,17 @@ function ascending(a,b){
 }
 
 function userAction(actionObject) {
-    const {elementId, elementValue, actionKey} = actionObject;
-    if(igoneKeyList.includes(actionKey)){
-        //ignore
-    }else if( actionKey == "@"){
-        splitChunk(elementId)
-    }else if(actionKey == "deleteKey"){
-        if(elementValue){
-            dataLink[elementId].raw_content = elementValue;
-        }else if(elementId !== dataLink.first_chunk){
-            removeChunk(elementId);
+    // console.log(actionObject)
+    actionObject.forEach(element => {
+        const {elementId, elementValue, type} = element;
+        if(type == "delete"){
+            this.removeChunk(elementId, elementValue);
+        }else{
+            this.dataLink[elementId].raw_content = elementValue;
+            this.dataLink[elementId].content = elementValue;
         }
-    }else{
-        //update value in chunk
-        dataLink[elementId].raw_content = elementValue;
-    }
+    });
+    this.onChange.current(this.dataLink)
 }
 
 function splitChunk(elementId) {
@@ -136,11 +149,12 @@ function splitChunk(elementId) {
 }
 
 function removeChunk(elementId:string) {
-    const chunk_to_remove = dataLink[elementId];
-    const last_chunk = dataLink[chunk_to_remove.last_chunk];
-    const next_chunk = dataLink[chunk_to_remove.next_chunk];
-    cursorAt.elementId = next_chunk.id;
-    cursorAt.at = last_chunk.content.length;
+    const chunk_to_remove = this.dataLink[elementId];
+    const last_chunk = this.dataLink[chunk_to_remove.last_chunk];
+    const next_chunk = this.dataLink[chunk_to_remove.next_chunk];
+    cursorAt.elementId = chunk_to_remove.id;
+    cursorAt.at = chunk_to_remove.content.length;
+    const count = chunk_count(this.dataLink);
     if(last_chunk && next_chunk){
         last_chunk.next_chunk = next_chunk.id;
         next_chunk.last_chunk = last_chunk.id;
@@ -151,5 +165,28 @@ function removeChunk(elementId:string) {
         cursorAt.elementId = next_chunk.id;
         cursorAt.at = 0;
     }
-    delete dataLink[elementId];
+    delete this.dataLink[elementId];
+    // this.dataLink.ui_version += 1;
+    // if(count > 1){
+    //     
+    // }else{
+    //     // this.dataLink[elementId].raw_content = elementValue;
+    //     // this.dataLink[elementId].content = elementValue;
+    //     this.dataLink.ui_version += 1;
+    // }
+}
+function addChunk(){
+
+}
+
+function chunk_count(dataLink){
+    let count = 0;
+    let next_chunk = dataLink.first_chunk;
+    while(next_chunk){
+        count++;
+        console.log(next_chunk)
+        next_chunk = dataLink[next_chunk].next_chunk;
+    }
+    console.log("count",count,dataLink)
+    return count;
 }

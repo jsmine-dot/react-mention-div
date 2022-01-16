@@ -23,3 +23,12 @@ interface ExtendedMentionObject extends MentionObject{
     start_index : number,
     end_index : number
 }
+interface EventObject{
+    elementId:string,
+    elementValue:string,
+    key:string,
+    type: eventType
+}
+
+export enum eventType {"keyup","paste","delete","cut"};
+export enum changeType {"characterData", "childList"}
