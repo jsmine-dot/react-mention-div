@@ -3,9 +3,11 @@ import Model from "./model";
 // import View from "./view";
 import controller from "./controller";
 
+let id = 100;
+let editBox:Element = null;
 
 function output(){
-    const nodes = {}
+    const nodes:DataLink = {}
     return function(changeObject){
         changeObject.forEach(record => {
             if(!record.id){return};
@@ -16,15 +18,31 @@ function output(){
                 const next_chunk = nodes[record.next_chunk];
                 if(last_chunk){
                     nodes[last_chunk].next_chunk = record.id;
-                    record.last_chunk = nodes[last_chunk].id;
                 }
                 if(next_chunk){
                     nodes[next_chunk].last_chunk = record.id;
-                    record.next_chunk = nodes[next_chunk].id;
+                }
+            } else if(record.type == "add"){
+                const last_chunk = nodes[record.last_chunk];
+                const next_chunk = nodes[record.next_chunk];
+                if(last_chunk){
+                    nodes[last_chunk].next_chunk = record.id;
+                }else{
+                    nodes.first_chunk = record.id;
+                }
+                if(next_chunk){
+                    nodes[next_chunk].last_chunk = record.id;
                 }
             }
         });
         console.log(nodes)
+        let out_value = '';
+        let current_chunk = nodes.first_chunk;
+        while(!current_chunk){
+            out_value += nodes[current_chunk].content;
+            current_chunk = nodes[current_chunk].next_chunk; 
+        }
+        console.log(out_value);
     }
 }
 const outPut_ = output();
@@ -111,20 +129,98 @@ export default function MentionBox(props=props_) {
          }
          inputRef.current.innerHTML = "&nbsp;"
          dataList.forEach(chunk=>{
-             let ele:any = document.createTextNode(chunk.content);
-             
+             let ele:any = createTextNode(chunk.content, ++id);
              if(chunk.mention){
-                 const eleWrapper = document.createElement('span');
-                 eleWrapper.setAttribute('chunk_id',chunk.id);
-                 eleWrapper.append(ele);
+                 const eleWrapper = createMentionElement(ele);
+                 
                  ele = eleWrapper;
              }
-             ele.chunk_id = chunk.id;
+             
              inputRef.current.append(ele)
          })
      },[inputRef.current])
-     return <div ref={inputRef} key={dataLink.ui_version} id={dataLink.ui_version}  contentEditable={true} onKeyUp={(e)=>userInput(e)}/>;
+     return <div ref={(node)=>{inputRef.current = node; editBox = node}} key={dataLink.ui_version} id={dataLink.ui_version}  contentEditable={true} onKeyUp={(e)=>userInput(e)} onKeyDown={(e)=>keyDown(e)}/>;
  }
+
+
+function keyDown(event:Event){
+    const selection = window.getSelection();
+    console.log(event)
+    switch(event.key){
+        case "@":{
+            mentionTriggered(selection.focusNode, selection.focusOffset);
+            event.preventDefault();
+            break;
+        }
+        case " ":{
+            spaceTriggered(selection.focusNode, selection.focusNode.textContent.length);
+            break;
+        }
+        default:break
+    }
+}
+
+function spaceTriggered(at_node:Node, at:number){
+    if(at_node.parentElement.nodeName == "SPAN"){
+        const empty_node = createTextNode( '\u00A0',++id);
+        insertAfter(at_node.parentElement, empty_node);
+        focusAt(empty_node,1);
+    }
+}
+
+function mentionTriggered(at_node:Node, at:number){
+    const mention:Element = createMentionElement(createTextNode("@",++id));
+    const after_node:Node = createTextNode(at_node.textContent.slice(at), ++id);
+    at_node.textContent = at_node.textContent.slice(0,at);
+    debugger
+    if(at_node.parentElement.nodeName == "SPAN" ){
+        debugger
+        insertAfter(at_node.parentNode, mention);
+    }else{
+        debugger
+        insertAfter(at_node, mention);
+    }
+    insertAfter(mention, after_node);
+    focusAt(mention,1);
+}
+
+function insertAfter(reference_node:Node, node:Node){
+    debugger
+    editBox.insertBefore(node, reference_node.nextSibling);
+}
+
+function appendBefore(at_node:Node, node: Node){
+    editBox.insertBefore(node, at_node);
+}
+
+function focusAt(node:Node,index:number){
+    const range = document.createRange();
+    range.setStart(node,index);
+    range.setEnd(node,index);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    range.collapse(true)
+    selection.addRange(range)
+}
+
+function createEmptyTextNode(){
+    return document.createElement("emptyTextNode")
+}
+
+function createTextNode(content, id){
+    const node = document.createTextNode(content);
+    node.chunk_id = id;
+    return node;
+}
+
+function createMentionElement(text_node:Node){
+    const element = document.createElement("span");
+    element.append(text_node);
+    element.chunk_id = text_node.chunk_id;
+    element.style.color = "#3e9bdf";
+    return element;
+}
+
 
  function prepareDataList(dataLink:DataLink){
     //  console.log("kkkk")
