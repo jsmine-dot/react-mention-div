@@ -5,6 +5,7 @@ import controller from "./controller";
 
 let id = 100;
 let editBox:Element = null;
+let optionPopUp:Node = null;
 
 function output(){
     const nodes:DataLink = {}
@@ -47,7 +48,7 @@ function output(){
 }
 const outPut_ = output();
 
-export default function MentionBox(props=props_) {
+export default function MentionBox(props) {
     const callBackRef = useRef(callBack);
     const [dataLink, setDataLink] = useState({});
     const [dataList, setDataList] = useState([]);
@@ -56,7 +57,7 @@ export default function MentionBox(props=props_) {
     const mutObserver = useMemo(()=>new MutationObserver(d=>g(d)),[props_]);
     const inputRef = useRef(null);
     const [showPopUp, setShowPopup] = useState("false");
-    const [optionsPosition, setPosition] = useState({top:"0px",left:"0px"})
+    const [optionsPosition, setPosition] = useState({top:"0px",left:"0px"});
     
     useEffect(()=>{
         if(inputRef.current){
@@ -139,11 +140,42 @@ export default function MentionBox(props=props_) {
              inputRef.current.append(ele)
          })
      },[inputRef.current])
-     return <div ref={(node)=>{inputRef.current = node; editBox = node}} key={dataLink.ui_version} id={dataLink.ui_version}  contentEditable={true} onKeyUp={(e)=>userInput(e)} onKeyDown={(e)=>keyDown(e)}/>;
+     return <div ref={(node)=>{inputRef.current = node; editBox = node}} key={dataLink.ui_version} id={dataLink.ui_version}  contentEditable={true} onKeyDown={(e)=>keyDown(e, props_.options)}/>
  }
 
+function focusInMention(options:Array<MentionObjects>){
+    const selection = window.getSelection();
+    if(selection.focusNode.parentElement.nodeName != "SPAN" && optionPopUp){
+        document.body.removeChild(optionPopUp);
+        optionPopUp = null;
+    }else if(!optionPopUp){
+        optionPopUp = prepareOptionsNode(options);
+        document.body.append(optionPopUp);
+        optionPopUp.style.position = "absolute";
+        const focusedNode = selection.focusNode;
+        const rect = focusedNode.parentElement.getBoundingClientRect();
+        optionPopUp.style.left = rect.x + "px";
+        optionPopUp.style.top = rect.y + 10 + "px";
+    }
+}
+function prepareOptionsNode(options:Array<MentionObjects>):Node{
+    const options_node = document.createElement("ul");
+    options_node.style.borderRadius = "5px";
+    options_node.style.backgroundColor = "#fff";
+    options_node.style.padding = "3px";
+    options_node.style.boxShadow = "0 0 2PX 2PX #c3c0c0";
+    options_node.style["list-style-type"] = "none";
+    for(let i = 0; i < options.length; i++){
+        const option_node = document.createElement("li");
+        option_node.innerText = options[i].display_content;
+        option_node.option_id = options[i].id;
+        options_node.append(option_node);
+    }
+    options_node.addEventListener("click",()=>{})
+    return options_node
+}
 
-function keyDown(event:Event){
+function keyDown(event:Event,options?:Array<MentionObject>){
     const selection = window.getSelection();
     console.log(event)
     switch(event.key){
@@ -155,6 +187,10 @@ function keyDown(event:Event){
         case " ":{
             spaceTriggered(selection.focusNode, selection.focusNode.textContent.length);
             break;
+        }
+        case "ArrowLeft":
+        case "ArrowRight":{
+            focusInMention(options);
         }
         default:break
     }
@@ -232,7 +268,7 @@ function createMentionElement(text_node:Node){
      }
      return dataList;
  }
- const props_:{data:Input, callBack:Function, options:[]} = {
+ const props_:{data:Input, callBack:Function, options:Array<MentionObject>} = {
      data: {
          raw_content:'@123 abc @567 bdfg ', 
          mentions:[
@@ -242,6 +278,6 @@ function createMentionElement(text_node:Node){
             ]
         },
      callBack: (data)=>console.log(data),
-     options:[]
+     options:[{id:677,display_content:"jumba"}, {id:358,display_content:"kalimba"}]
  }
 
