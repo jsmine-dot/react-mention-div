@@ -5,11 +5,15 @@ import controller from "./controller";
 
 let id = 100;
 let editBox:Element = null;
-let optionPopUp:Node = null;
+let optionPopUp: Node = null;
+let activeNode: Node = null;
+const observer = new MutationObserver(mutationRecords => { console.log(mutationRecords); observeBox(mutationRecords) })
 
 function output(){
     const nodes:DataLink = {}
-    return function(changeObject){
+    return function (changeObject) {
+        console.log("out", changeObject);
+        return;
         changeObject.forEach(record => {
             if(!record.id){return};
             if(record.type == "update"){
@@ -49,108 +53,96 @@ function output(){
 const outPut_ = output();
 
 export default function MentionBox(props) {
-    const callBackRef = useRef(callBack);
-    const [dataLink, setDataLink] = useState({});
-    const [dataList, setDataList] = useState([]);
-    const model = useMemo(()=>new Model(props_.data,callBackRef),[props_]);
-    const actionHandler = useCallback(controller(outPut_),[model]);
-    const mutObserver = useMemo(()=>new MutationObserver(d=>g(d)),[props_]);
-    const inputRef = useRef(null);
-    const [showPopUp, setShowPopup] = useState("false");
-    const [optionsPosition, setPosition] = useState({top:"0px",left:"0px"});
-    
-    useEffect(()=>{
-        if(inputRef.current){
-            mutObserver.observe(inputRef.current,{
-                childList: true, // observe direct children
-                subtree: true, // lower descendants too
-                characterData:true,
-                characterDataOldValue:true,
-            
-              })
-        }
-    },[mutObserver, inputRef.current]);
-
-     useEffect(()=>{
-        //  console.log("here",dataLink)
-         if(dataLink && dataLink.first_chunk){
-             const dataList_new = prepareDataList(dataLink);
-            setDataList(dataList_new)
-            // console.log("here_",dataList_new)   
-         }
-         
-     },[dataLink]);
-
-     useEffect(()=>{
-        //  console.log("ff",{...model.dataLink});
-         setDataLink(()=>({...model.dataLink}))
-     },[model]);
-
-     function callBack(data){
-        //  console.log("data",data)
-        // console.log('l', dataLink);
-        setDataLink({...data});
-     }
-     
-     useEffect(()=>{
-         callBackRef.current = callBack;
-     },[dataLink])
-
-     function g(mutationRecord){
-         actionHandler(mutationRecord);
-         
-     }
-     function userInput(event){
-        if([37,39].includes(event.keyCode)){
-            const focusedNode =  window.getSelection().focusNode;
-            setShowPopup(focusedNode.parentNode['chunk_id'])
-            // console.log(window.getSelection())
-            const rect = focusedNode.parentElement.getBoundingClientRect();
-            setPosition(()=>({top:rect.y+rect.height,left:rect.x}));
-        }
-     }
-     useEffect(()=>{
-         if(!showPopUp){
-             return
-         }
-        //  console.log(optionsPosition)
-         const optionPopUp = document.createElement('div');
-         optionPopUp.classList.add('xyz');
-         optionPopUp.style.border = "5px solid";
-         optionPopUp.style.background = "#fff";
-         optionPopUp.style.position = "absolute";
-         optionPopUp.style.left = optionsPosition.left+"px";
-         optionPopUp.style.top = optionsPosition.top+"px";
-         document.body.append(optionPopUp)
-         return ()=>optionPopUp.remove()
-     },[props_.options,showPopUp,optionsPosition])
-     useEffect(()=>{
-         if(!inputRef.current){
-             return;
-         }
-         inputRef.current.innerHTML = "&nbsp;"
-         dataList.forEach(chunk=>{
-             let ele:any = createTextNode(chunk.content, ++id);
-             if(chunk.mention){
-                 const eleWrapper = createMentionElement(ele);
-                 
-                 ele = eleWrapper;
-             }
-             
-             inputRef.current.append(ele)
-         })
-     },[inputRef.current])
-     return <div ref={(node)=>{inputRef.current = node; editBox = node}} key={dataLink.ui_version} id={dataLink.ui_version}  contentEditable={true} onKeyDown={(e)=>keyDown(e, props_.options)}/>
+    return <div ref={(node) => { editBox = node; attachObserver(node, observer) }} key={"alpha"} style={{ "border": "1px solid" }} contentEditable={true} onClick={(e) => keyUp(e, props_.options)} onKeyDown={(e) => keyDown(e, props_.options)} onKeyUp={(e) => keyUp(e, props_.options)} />
  }
 
+function keyUp(event: Event, options?: Array<MentionObject>) {
+    focusInMention(options);
+}
+
+function keyDown(event: Event, options?: Array<MentionObject>) {
+    const selection = window.getSelection();
+    switch (event.key) {
+        case "@": {
+            mentionTriggered(selection.focusNode, selection.focusOffset);
+            event.preventDefault();
+            break;
+        }
+        case " ": {
+            spaceTriggered(selection.focusNode, selection.focusNode.textContent.length);
+            break;
+        }
+        case "Backspace":
+        case "Delete": {
+            printSelectedNode()
+            break;
+        }
+        case "ArrowLeft":
+        case "ArrowRight":
+        default: {
+            break
+        }
+    }
+
+}
+
+function observeBox(mutationRecords: MutationRecord[]) {
+    const record = mutationRecords[0];
+    if (record.removedNodes.length > 0) {
+        let at = 0;
+        let focusNode: Node = editBox;
+        if (record.previousSibling) {
+            focusNode = record.previousSibling.childNodes.length ? record.previousSibling.childNodes[0] : record.previousSibling;
+            at = (focusNode.textContent || focusNode.innerText).length;
+        }
+        focusAt(focusNode, at)
+    } else if (record.addedNodes.length > 0) {
+        record.addedNodes[0]["chunk_id"] = ++id;
+    }
+}
+function printSelectedNode() {
+    const selection = window.getSelection();
+    console.log(selection.focusNode);
+}
+function optionSelected(event: Event) {
+    const targetNode = event.target;
+    console.log(event);
+    if (!activeNode) {
+        return;
+    }
+    activeNode.textContent = "@" + targetNode.innerText;
+    activeNode["mention_id"] = targetNode["mention_id"];
+    activeNode.parentElement && applyColor(activeNode.parentElement, "#3e9bdf");
+    const mentionObserver = new MutationObserver((mutationRecords) => optionDeSelected(mutationRecords[0].target));
+    mentionObserver.observe(activeNode, { characterData: true });
+    const textNode = createEmptyTextNode();
+    insertAfter(activeNode.parentElement, textNode);
+    focusAt(textNode, 1);
+}
+
+function attachObserver(node: Node, observer) {
+    observer.observe(node, {childList: true})
+}
+
+function optionDeSelected(activeNode) {
+    delete activeNode["mention_id"];
+    console.log("--", activeNode);
+    activeNode.parentElement && applyColor(activeNode.parentElement, "#a9a9a9");
+}
 function focusInMention(options:Array<MentionObjects>){
     const selection = window.getSelection();
-    if(selection.focusNode.parentElement.nodeName != "SPAN" && optionPopUp){
+    activeNode = selection && selection.focusNode;
+    if (optionPopUp) {
+        optionPopUp.removeEventListener("click", optionSelected);
         document.body.removeChild(optionPopUp);
         optionPopUp = null;
-    }else if(!optionPopUp){
+    }
+    if (activeNode.parentElement["mention_box"]){
         optionPopUp = prepareOptionsNode(options);
         document.body.append(optionPopUp);
+
+        optionPopUp.addEventListener("click", optionSelected);
+
         optionPopUp.style.position = "absolute";
         const focusedNode = selection.focusNode;
         const rect = focusedNode.parentElement.getBoundingClientRect();
@@ -168,52 +160,33 @@ function prepareOptionsNode(options:Array<MentionObjects>):Node{
     for(let i = 0; i < options.length; i++){
         const option_node = document.createElement("li");
         option_node.innerText = options[i].display_content;
-        option_node.option_id = options[i].id;
+        option_node.mention_id = options[i].id;
         options_node.append(option_node);
     }
     options_node.addEventListener("click",()=>{})
     return options_node
 }
 
-function keyDown(event:Event,options?:Array<MentionObject>){
-    const selection = window.getSelection();
-    console.log(event)
-    switch(event.key){
-        case "@":{
-            mentionTriggered(selection.focusNode, selection.focusOffset);
-            event.preventDefault();
-            break;
-        }
-        case " ":{
-            spaceTriggered(selection.focusNode, selection.focusNode.textContent.length);
-            break;
-        }
-        case "ArrowLeft":
-        case "ArrowRight":{
-            focusInMention(options);
-        }
-        default:break
-    }
-}
+
 
 function spaceTriggered(at_node:Node, at:number){
-    if(at_node.parentElement.nodeName == "SPAN"){
-        const empty_node = createTextNode( '\u00A0',++id);
+    if (at_node.parentElement.nodeName == "SPAN") {
+        const empty_node = createEmptyTextNode();
         insertAfter(at_node.parentElement, empty_node);
         focusAt(empty_node,1);
     }
 }
 
 function mentionTriggered(at_node:Node, at:number){
-    const mention:Element = createMentionElement(createTextNode("@",++id));
+    const mention:Element = createSpan(createTextNode("@",++id));
     const after_node:Node = createTextNode(at_node.textContent.slice(at), ++id);
-    at_node.textContent = at_node.textContent.slice(0,at);
-    debugger
+    at_node.textContent = at_node.textContent.slice(0, at);
+    mention["mention_box"] = true;
     if(at_node.parentElement.nodeName == "SPAN" ){
-        debugger
+       
         insertAfter(at_node.parentNode, mention);
     }else{
-        debugger
+       
         insertAfter(at_node, mention);
     }
     insertAfter(mention, after_node);
@@ -221,7 +194,7 @@ function mentionTriggered(at_node:Node, at:number){
 }
 
 function insertAfter(reference_node:Node, node:Node){
-    debugger
+    
     editBox.insertBefore(node, reference_node.nextSibling);
 }
 
@@ -229,7 +202,8 @@ function appendBefore(at_node:Node, node: Node){
     editBox.insertBefore(node, at_node);
 }
 
-function focusAt(node:Node,index:number){
+function focusAt(node: Node, index: number) {
+    debugger
     const range = document.createRange();
     range.setStart(node,index);
     range.setEnd(node,index);
@@ -240,7 +214,7 @@ function focusAt(node:Node,index:number){
 }
 
 function createEmptyTextNode(){
-    return document.createElement("emptyTextNode")
+    return createTextNode('\u00A0', ++id);
 }
 
 function createTextNode(content, id){
@@ -249,12 +223,17 @@ function createTextNode(content, id){
     return node;
 }
 
-function createMentionElement(text_node:Node){
+function createSpan(text_node:Node){
     const element = document.createElement("span");
     element.append(text_node);
-    element.chunk_id = text_node.chunk_id;
-    element.style.color = "#3e9bdf";
+   /* element.chunk_id = text_node.chunk_id;*/
+    /*element.style.color = "#3e9bdf";*/
+    applyColor(element,"#a9a9a9");
     return element;
+}
+
+function applyColor(element: Element, color: string) {
+    element.style.color = color;
 }
 
 
