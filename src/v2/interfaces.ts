@@ -29,6 +29,9 @@ interface EventObject{
     key:string,
     type: eventType
 }
+interface Output extends Input{
+    search_key: string
+}
 
 export enum eventType {"keyup","paste","delete","cut"};
 export enum changeType {"characterData", "childList"}
