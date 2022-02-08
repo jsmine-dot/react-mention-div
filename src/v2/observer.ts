@@ -3,11 +3,13 @@ export default (() => {
     let activeNode: Node = null;
     let editBox: Node;
     let options: MentionObject[];
-    let initialValue: string;
     let callback: Function;
     let timeOut = null;
     let outputObject: Output;
-
+    let value: Input;
+    let freshValue: boolean;
+    const selectedMentionBoxColor = "#3e9bdf";
+    const mentionBoxColor = "#a9a9a9";
     const observer = new MutationObserver(mutationRecords => { observeBox(mutationRecords) });
 
     function keyUp(event: Event) {
@@ -105,7 +107,7 @@ export default (() => {
         }
         activeNode.textContent = "@" + targetNode.innerText;
         activeNode["mention_id"] = targetNode["mention_id"];
-        activeNode.parentElement && applyColor(activeNode.parentElement, "#3e9bdf");
+        activeNode.parentElement && applyColor(activeNode.parentElement, selectedMentionBoxColor);
         const mentionObserver = new MutationObserver((mutationRecords) => optionDeSelected(mutationRecords[0].target));
         mentionObserver.observe(activeNode, { characterData: true });
         const textNode = createEmptyTextNode();
@@ -116,7 +118,7 @@ export default (() => {
     function optionDeSelected(activeNode) {
         console.log("deselected", activeNode);
         delete activeNode["mention_id"];
-        activeNode.parentElement && applyColor(activeNode.parentElement, "#a9a9a9");
+        activeNode.parentElement && applyColor(activeNode.parentElement, mentionBoxColor);
     }
     function presentOptionList() {
         const selection = window.getSelection();
@@ -210,7 +212,7 @@ export default (() => {
     function createSpan(text_node: Node) {
         const element = document.createElement("span");
         element.append(text_node);
-        applyColor(element, "#a9a9a9");
+        applyColor(element, mentionBoxColor);
         return element;
     }
 
@@ -222,14 +224,18 @@ export default (() => {
         editBox.removeEventListener("keydown", keyDown);
         observer.disconnect();
     }
+    function setObserver() {
+        observer.observe(editBox, { childList: true, characterData: true, characterDataOldValue: true, subtree: true });
+        editBox.addEventListener("keyup", keyUp);
+        editBox.addEventListener("keydown", keyDown);
+    }
     function setNode(node: Node) {
         if (editBox) {
             clearObserver();
         }
         editBox = node;
-        observer.observe(editBox, { childList: true, characterData: true, characterDataOldValue: true, subtree: true });
-        editBox.addEventListener("keyup", keyUp);
-        editBox.addEventListener("keydown", keyDown);
+        setInitialValue();
+        setObserver();
     }
     function setOptions(_options: MentionObjects[]) {
         options = _options;
@@ -238,8 +244,54 @@ export default (() => {
     function setCallback(_callback: Function) {
         callback = _callback
     }
-    function setInitialValue(initialValue: string) {
-
+    function setValue(_value: Input) {
+        freshValue = value !== _value;
+        value = _value;
+        setInitialValue();
     }
-    return { setNode, setOptions, setCallback, setInitialValue }
+    function setInitialValue() {
+        if (!(editBox && value && freshValue)) {
+            return;
+        }
+        freshValue = false;
+        clearObserver();
+        const mentions = value.mentions||[];
+        const indexDict = {};
+        if (mentions.length > 0) {
+            mentions.forEach(mention => {
+                indexDict[mention.start_index] = { end_index: mention.end_index + 1, mention };
+            })
+        }
+        let sorted_indexDict_keys = Object.keys(indexDict).sort(ascending);
+        if (!sorted_indexDict_keys.includes("0")) {
+            indexDict[0] = { end_index: sorted_indexDict_keys[0] };
+        }
+        for (let i = 0; i < sorted_indexDict_keys.length; i++) {
+            if (+sorted_indexDict_keys[i + 1] - +sorted_indexDict_keys[i] > 1) {
+                indexDict[+sorted_indexDict_keys[i] + 1 + ''] = { end_index: +sorted_indexDict_keys[i + 1] }
+            }
+        }
+        Object.keys(indexDict).sort(ascending).forEach(key => {
+            const indexDictValue = indexDict[key];
+            let node: Element | Node;
+            if (indexDictValue.mention) {
+                node = createTextNode("@" + indexDictValue.mention.name, true);
+                node.mention_id = indexDictValue.mention.id;
+                node = createSpan(node);
+                applyColor(node, selectedMentionBoxColor);
+            } else {
+                node = createTextNode(value.raw_content.slice(key, indexDictValue.end_index));
+            }
+            editBox.appendChild(node);
+        })
+        
+        setObserver();
+    }
+    function ascending(a, b) {
+        return a == b ? 0 : a > b ? 1 : 0;
+    }
+    function descending(a, b) {
+        return a == b ? 0 : a < b ? 1 : 0;
+    }
+    return { setNode, setOptions, setCallback, setValue }
 })()
