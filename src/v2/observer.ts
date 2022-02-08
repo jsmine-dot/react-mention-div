@@ -5,11 +5,21 @@ export default (() => {
     let options: MentionObject[];
     let initialValue: string;
     let callback: Function;
+    let timeOut = null;
+    let outputObject: Output;
 
-    const inputObserver = new MutationObserver(mutationRecords => { observeBox(mutationRecords) });
+    const observer = new MutationObserver(mutationRecords => { observeBox(mutationRecords) });
 
-    function keyUp(event: Event, options?: Array<MentionObject>) {
-        presentOptionList(options);
+    function keyUp(event: Event) {
+        presentOptionList();
+        switch (event.key) {
+            case "ArrowLeft":
+            case "ArrowRight": {
+                triggerCallback();
+                break;
+            }
+            default: break
+        }
     }
 
     function keyDown(event: Event) {
@@ -28,12 +38,7 @@ export default (() => {
             case "Delete": {
                 break;
             }
-            case "ArrowLeft":
-            case "ArrowRight":
-            default: {
-               
-                break;
-            }
+            default: break;
         }
     }
 
@@ -47,6 +52,49 @@ export default (() => {
                 at = (focusNode.textContent || focusNode.innerText).length;
             }
             focusAt(focusNode, at)
+        }
+        if (timeOut) {
+            clearTimeout(timeOut);
+        }
+        timeOut = setTimeout(() => {
+            const treeWalker = document.createTreeWalker(editBox, 4);
+            const nodeList = [];
+            let currentNode = treeWalker.currentNode;
+            currentNode = treeWalker.nextNode();
+            while (currentNode) {
+                nodeList.push(currentNode);
+                currentNode = treeWalker.nextNode();
+            }
+            let raw_string = "";
+            const mentions = [];
+            nodeList.forEach(node => {
+                if (node.mention_id) {
+                    mentions.push({ id: node.mention_id, display_value: node.data, start_index: raw_string.length, end_index: raw_string.length + node.mention_id.toString().length });
+                    raw_string += node.mention_id;
+                } else {
+                    raw_string += node.data;
+                }
+            })
+            const focusedNode = window.getSelection().focusNode;
+            let search_key;
+            if (focusedNode.mention_node) {
+                search_key = focusedNode.data.split("@")[1];
+            }
+            setOutputObject({ raw_string, mentions, search_key });
+            triggerCallback();
+        }, 1);
+    }
+    function triggerCallback() {
+        attachSearchParam();
+        callback(outputObject)
+    }
+    function setOutputObject(_outputObject) {
+        outputObject = _outputObject
+    }
+    function attachSearchParam() {
+        const focusedNode = window.getSelection().focusNode;
+        if (focusedNode.mention_node) {
+            outputObject.search_key = focusedNode.data.split("@")[1];
         }
     }
 
@@ -169,18 +217,26 @@ export default (() => {
     function applyColor(element: Element, color: string) {
         element.style.color = color;
     }
+    function clearObserver() {
+        editBox.removeEventListener("keyup", keyUp);
+        editBox.removeEventListener("keydown", keyDown);
+        observer.disconnect();
+    }
     function setNode(node: Node) {
+        if (editBox) {
+            clearObserver();
+        }
         editBox = node;
-        inputObserver.observe(node, { childList: true });
-        node.addEventListener("keyup", (event: Event) => keyUp(event));
-        node.addEventListener("keydown", (event: Event) => keyDown(event));
+        observer.observe(editBox, { childList: true, characterData: true, characterDataOldValue: true, subtree: true });
+        editBox.addEventListener("keyup", keyUp);
+        editBox.addEventListener("keydown", keyDown);
     }
     function setOptions(_options: MentionObjects[]) {
         options = _options;
         presentOptionList();
     }
-    function setCallback(callback: Function) {
-        callback = callback
+    function setCallback(_callback: Function) {
+        callback = _callback
     }
     function setInitialValue(initialValue: string) {
 
