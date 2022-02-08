@@ -108,11 +108,19 @@ export default (() => {
         activeNode.textContent = "@" + targetNode.innerText;
         activeNode["mention_id"] = targetNode["mention_id"];
         activeNode.parentElement && applyColor(activeNode.parentElement, selectedMentionBoxColor);
-        const mentionObserver = new MutationObserver((mutationRecords) => optionDeSelected(mutationRecords[0].target));
-        mentionObserver.observe(activeNode, { characterData: true });
+        setMentionBoxObserver(activeNode);
         const textNode = createEmptyTextNode();
         insertAfter(activeNode.parentElement, textNode);
         focusAt(textNode, 1);
+    }
+
+    function setMentionBoxObserver(node: Node) {
+        let mentionObserver: MutationObserver;
+        mentionObserver = new MutationObserver((mutationRecords) => {
+            mentionObserver.disconnect();
+            optionDeSelected(mutationRecords[0].target);
+        });
+        mentionObserver.observe(node, { characterData: true });
     }
 
     function optionDeSelected(activeNode) {
@@ -277,6 +285,7 @@ export default (() => {
             if (indexDictValue.mention) {
                 node = createTextNode("@" + indexDictValue.mention.name, true);
                 node.mention_id = indexDictValue.mention.id;
+                setMentionBoxObserver(node);
                 node = createSpan(node);
                 applyColor(node, selectedMentionBoxColor);
             } else {
@@ -289,9 +298,6 @@ export default (() => {
     }
     function ascending(a, b) {
         return a == b ? 0 : a > b ? 1 : 0;
-    }
-    function descending(a, b) {
-        return a == b ? 0 : a < b ? 1 : 0;
     }
     return { setNode, setOptions, setCallback, setValue }
 })()
