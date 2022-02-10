@@ -31,11 +31,7 @@ export default (() => {
                 break;
             }
             case " ": {
-                spaceTriggered(selection.focusNode, selection.focusNode.textContent.length);
-                break;
-            }
-            case "Backspace":
-            case "Delete": {
+                selection.focusNode.mentionNode && (insertEmpty(selection.focusNode), event.preventDefault());
                 break;
             }
             default: break;
@@ -184,12 +180,10 @@ export default (() => {
         return options_node
     }
 
-    function spaceTriggered(at_node: Node, at: number) {
-        if (at_node.parentElement.nodeName == "SPAN") {
+    function insertEmpty(at_node: Node) {
             const empty_node = createEmptyTextNode();
             insertAfter(at_node.parentElement, empty_node);
             focusAt(empty_node, 1);
-        }
     }
 
     function mentionTriggered(at_node: Node, at: number) {
