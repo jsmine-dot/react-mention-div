@@ -1,16 +1,14 @@
 export default (() => {
-    let optionPopUp: Node = null;
+    let optionPopup: Node = null;
     let activeNode: Node = null;
-    let editBox: Node;
-    let options: MentionObject[];
-    let callback: Function;
-    let timeOut = null;
-    let outputObject: Output;
-    let value: Input;
-    let freshValue: boolean;
+    let timeout = null;
+    let outputObject: Output = {};
+    let oldRawContent: string;
+    let state: { editBox?: Node, value?: Input, options?: MentionObject[], callback?: Function };
     const selectedMentionBoxColor = "#3e9bdf";
     const mentionBoxColor = "#a9a9a9";
     const observer = new MutationObserver(mutationRecords => { observeBox(mutationRecords) });
+    const mentionBoxObservers: { string?: MutationObserver } = {};
 
     function keyUp(event: Event) {
         presentOptionList();
@@ -45,6 +43,7 @@ export default (() => {
     }
 
     function observeBox(mutationRecords: MutationRecord[]) {
+        const { editBox } = state;
         const record = mutationRecords[0];
         if (record.removedNodes.length > 0) {
             let at = 0;
@@ -55,10 +54,10 @@ export default (() => {
             }
             focusAt(focusNode, at)
         }
-        if (timeOut) {
-            clearTimeout(timeOut);
+        if (timeout) {
+            clearTimeout(timeout);
         }
-        timeOut = setTimeout(() => {
+        timeout = setTimeout(() => {
             const treeWalker = document.createTreeWalker(editBox, 4);
             const nodeList = [];
             let currentNode = treeWalker.currentNode;
@@ -70,16 +69,16 @@ export default (() => {
             let raw_string = "";
             const mentions = [];
             nodeList.forEach(node => {
-                if (node.mention_id) {
-                    mentions.push({ id: node.mention_id, display_value: node.data, start_index: raw_string.length, end_index: raw_string.length + node.mention_id.toString().length });
-                    raw_string += node.mention_id;
+                if (node.mentionId) {
+                    mentions.push({ id: node.mentionId, display_value: node.data, startIndex: raw_string.length, endIndex: raw_string.length + node.mentionId.toString().length });
+                    raw_string += node.mentionId;
                 } else {
                     raw_string += node.data;
                 }
             })
             const focusedNode = window.getSelection().focusNode;
             let search_key;
-            if (focusedNode.mention_node) {
+            if (focusedNode.mentionNode) {
                 search_key = focusedNode.data.split("@")[1];
             }
             setOutputObject({ raw_string, mentions, search_key });
@@ -87,6 +86,7 @@ export default (() => {
         }, 1);
     }
     function triggerCallback() {
+        const { callback } = state;
         attachSearchParam();
         callback(outputObject)
     }
@@ -95,7 +95,7 @@ export default (() => {
     }
     function attachSearchParam() {
         const focusedNode = window.getSelection().focusNode;
-        if (focusedNode.mention_node) {
+        if (focusedNode.mentionNode) {
             outputObject.search_key = focusedNode.data.split("@")[1];
         }
     }
@@ -106,7 +106,7 @@ export default (() => {
             return;
         }
         activeNode.textContent = "@" + targetNode.innerText;
-        activeNode["mention_id"] = targetNode["mention_id"];
+        activeNode["mentionId"] = targetNode["mentionId"];
         activeNode.parentElement && applyColor(activeNode.parentElement, selectedMentionBoxColor);
         setMentionBoxObserver(activeNode);
         const textNode = createEmptyTextNode();
@@ -118,38 +118,57 @@ export default (() => {
         let mentionObserver: MutationObserver;
         mentionObserver = new MutationObserver((mutationRecords) => {
             mentionObserver.disconnect();
+            delete mentionBoxObservers[node.mentionId];
             optionDeSelected(mutationRecords[0].target);
         });
         mentionObserver.observe(node, { characterData: true });
+        mentionBoxObservers[node.mentionId] = mentionObserver
+    }
+
+    function clearMentionBoxObservers() {
+        for (let observerKey in mentionBoxObservers) {
+            const observer = mentionBoxObservers[observerKey];
+            observer.disconnect();
+            delete mentionBoxObservers[observerKey];
+        }
     }
 
     function optionDeSelected(activeNode) {
         console.log("deselected", activeNode);
-        delete activeNode["mention_id"];
+        delete activeNode["mentionId"];
         activeNode.parentElement && applyColor(activeNode.parentElement, mentionBoxColor);
     }
     function presentOptionList() {
+        const { options } = state;
         const selection = window.getSelection();
         activeNode = selection && selection.focusNode;
-        if (optionPopUp) {
-            optionPopUp.removeEventListener("click", optionSelected);
-            document.body.removeChild(optionPopUp);
-            optionPopUp = null;
+        if (optionPopup) {
+            clearOptionsPopup();
         }
-        if (activeNode && activeNode.mention_node && options && options.length) {
-            optionPopUp = prepareOptionsNode();
-            document.body.append(optionPopUp);
+        if (activeNode && activeNode.mentionNode && options && options.length) {
+            optionPopup = prepareOptionsNode();
+            document.body.append(optionPopup);
 
-            optionPopUp.addEventListener("click", optionSelected);
+            optionPopup.addEventListener("click", optionSelected);
 
-            optionPopUp.style.position = "absolute";
+            optionPopup.style.position = "absolute";
             const focusedNode = selection.focusNode;
             const rect = focusedNode.parentElement.getBoundingClientRect();
-            optionPopUp.style.left = rect.x + "px";
-            optionPopUp.style.top = rect.y + 10 + "px";
+            optionPopup.style.left = rect.x + "px";
+            optionPopup.style.top = rect.y + 10 + "px";
         }
     }
+    function clearOptionsPopup() {
+        if (!optionPopup) {
+            return;
+        }
+        optionPopup.removeEventListener("click", optionSelected);
+        optionPopup.childNodes.length && optionPopup.childNodes[0].parentElement.remove();
+        /*document.body.removeChild(optionPopup);*/
+    }
+
     function prepareOptionsNode(): Node {
+        const { options } = state;
         const options_node = document.createElement("ul");
         options_node.style.borderRadius = "5px";
         options_node.style.backgroundColor = "#fff";
@@ -159,10 +178,9 @@ export default (() => {
         for (let i = 0; i < options.length; i++) {
             const option_node = document.createElement("li");
             option_node.innerText = options[i].name;
-            option_node.mention_id = options[i].id;
+            option_node.mentionId = options[i].id;
             options_node.append(option_node);
         }
-        options_node.addEventListener("click", () => { })
         return options_node
     }
 
@@ -191,7 +209,7 @@ export default (() => {
     }
 
     function insertAfter(reference_node: Node, node: Node) {
-
+        const { editBox } = state;
         editBox.insertBefore(node, reference_node.nextSibling);
     }
 
@@ -209,10 +227,10 @@ export default (() => {
         return createTextNode('\u00A0');
     }
 
-    function createTextNode(content: string | number, mention_node?: boolean) {
+    function createTextNode(content: string | number, mentionNode?: boolean) {
         const node = document.createTextNode(content + '');
-        if (mention_node) {
-            node.mention_node = mention_node;
+        if (mentionNode) {
+            node.mentionNode = mentionNode;
         }
         return node;
     }
@@ -227,56 +245,48 @@ export default (() => {
     function applyColor(element: Element, color: string) {
         element.style.color = color;
     }
+    function clearEditBox() {
+        const { editBox } = state;
+        clearObserver();
+        editBox && editBox.childNodes.length && (editBox.childNodes[0].parentElement.innerHTML = "");
+    }
     function clearObserver() {
+        const { editBox } = state;
+        clearMentionBoxObservers();
+        if (!editBox) {
+            return;
+        }
         editBox.removeEventListener("keyup", keyUp);
         editBox.removeEventListener("keydown", keyDown);
         observer.disconnect();
     }
     function setObserver() {
+        const { editBox } = state;
         observer.observe(editBox, { childList: true, characterData: true, characterDataOldValue: true, subtree: true });
         editBox.addEventListener("keyup", keyUp);
         editBox.addEventListener("keydown", keyDown);
     }
-    function setNode(node: Node) {
-        if (editBox) {
-            clearObserver();
-        }
-        editBox = node;
-        setInitialValue();
-        setObserver();
-    }
-    function setOptions(_options: MentionObjects[]) {
-        options = _options;
-        presentOptionList();
-    }
-    function setCallback(_callback: Function) {
-        callback = _callback
-    }
-    function setValue(_value: Input) {
-        freshValue = value !== _value;
-        value = _value;
-        setInitialValue();
-    }
     function setInitialValue() {
-        if (!(editBox && value && freshValue)) {
+        const { editBox, value } = state;
+        const { rawContent, mentions = [] } = value;
+        if (!(editBox && value && rawContent && oldRawContent !== rawContent )) {
             return;
         }
-        freshValue = false;
+        oldRawContent === rawContent;
         clearObserver();
-        const mentions = value.mentions||[];
         const indexDict = {};
         if (mentions.length > 0) {
             mentions.forEach(mention => {
-                indexDict[mention.start_index] = { end_index: mention.end_index + 1, mention };
+                indexDict[mention.startIndex] = { endIndex: mention.endIndex + 1, mention };
             })
         }
-        let sorted_indexDict_keys = Object.keys(indexDict).sort(ascending);
-        if (!sorted_indexDict_keys.includes("0")) {
-            indexDict[0] = { end_index: sorted_indexDict_keys[0] };
+        let sortedIndexDictKeys = Object.keys(indexDict).sort(ascending);
+        if (!sortedIndexDictKeys.includes("0")) {
+            indexDict[0] = { endIndex: sortedIndexDictKeys[0] };
         }
-        for (let i = 0; i < sorted_indexDict_keys.length; i++) {
-            if (+sorted_indexDict_keys[i + 1] - +sorted_indexDict_keys[i] > 1) {
-                indexDict[+sorted_indexDict_keys[i] + 1 + ''] = { end_index: +sorted_indexDict_keys[i + 1] }
+        for (let i = 0; i < sortedIndexDictKeys.length; i++) {
+            if (+sortedIndexDictKeys[i + 1] - +sortedIndexDictKeys[i] > 1) {
+                indexDict[+sortedIndexDictKeys[i] + 1 + ''] = { endIndex: +sortedIndexDictKeys[i + 1] }
             }
         }
         Object.keys(indexDict).sort(ascending).forEach(key => {
@@ -284,12 +294,12 @@ export default (() => {
             let node: Element | Node;
             if (indexDictValue.mention) {
                 node = createTextNode("@" + indexDictValue.mention.name, true);
-                node.mention_id = indexDictValue.mention.id;
+                node.mentionId = indexDictValue.mention.id;
                 setMentionBoxObserver(node);
                 node = createSpan(node);
                 applyColor(node, selectedMentionBoxColor);
             } else {
-                node = createTextNode(value.raw_content.slice(key, indexDictValue.end_index));
+                node = createTextNode(rawContent.slice(key, indexDictValue.endIndex));
             }
             editBox.appendChild(node);
         })
@@ -299,5 +309,31 @@ export default (() => {
     function ascending(a, b) {
         return a == b ? 0 : a > b ? 1 : 0;
     }
-    return { setNode, setOptions, setCallback, setValue }
+    function set(_state: { editBox?: Node, value?: Input, options?: MentionObject[], callback?: Function }) {
+        const updatedValues = Object.keys(_state);
+        if (updatedValues.includes("editBox") && !_state.editBox) {
+            /*if editBox is being set to null, remove observers from the node first*/
+            clearObserver();
+        }
+        state = { ...state, ..._state };
+        if (updatedValues.includes("editBox")) {
+            clearObserver();
+            setObserver();
+        }
+        if (updatedValues.includes("value")) {
+            setInitialValue();
+        }
+        if (updatedValues.includes("options")) {
+            presentOptionList();
+        }
+    }
+    function clear() {
+        clearEditBox();
+        clearOptionsPopup();
+        activeNode = null;
+        clearTimeout(timeout);
+        outputObject = {};
+        state = {};
+    }
+    return { set, clear}
 })()
