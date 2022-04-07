@@ -13,16 +13,20 @@ import it in your file
  ```
  import Mention from '@jsmine/react-mention-div'
  ```
+ 
  use it:
 ```javascript
  <Mention 
-      	ListingUi={({option})=><div>{option.name}</div>} 
-      	onChange={(change)=>'your on change handler'} 
-      	trigger={'@'} 
-      	className={'class for input box'}
-      	style={'inline style'} 
-      	optionsListClass={'class for options list'}
-      	optionDisplayKey={'name'}
+        className={'class for edit box'}      	      	
+        onChange={(change)=>'your on change handler'} 
       	options={[{name:'ABCD', id:1},{name:'XYZ', id:2}]}
+      	style={'inline style'} 
+      	value={{rawText:"@1erty",mentions:[{name:'qw', id: 1, startIndex: 0, endIndex:1}]}}
       />
 ```
+
+## version 2.0.0
+### introduced props
+value
+### depricated props
+ListingUi, trigger, optionsListClass, optionDisplayKey

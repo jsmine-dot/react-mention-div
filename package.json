@@ -3,14 +3,13 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:development": "babel ./src --out-dir ./dist --source-maps --copy-files",
     "build": "babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments",
-    "build:type:development": "babel ./src/v2/ --out-dir ./dist --source-maps --copy-files --extensions .ts,.tsx "
+    "build:type:development": "babel ./src/index.js --out-dir ./dist --source-maps --copy-files"
   },
   "repository": {
     "type": "git",
@@ -60,5 +59,8 @@
     "@babel/preset-typescript": "^7.16.7",
     "babel-preset-minify": "^0.5.1",
     "minify": "^7.0.2"
+  },
+  "dependencies": {
+    "@jsmine/mention-observer": "^1.0.1"
   }
 }
