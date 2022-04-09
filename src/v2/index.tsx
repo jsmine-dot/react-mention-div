@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import observer from "@jsmine/mention-observer";
+import observer from "@jsmine/mention-observer"; 
 
 export default function MentionBox(props) {
     const ref = useRef(null);
@@ -7,10 +7,10 @@ export default function MentionBox(props) {
     useEffect(() => { observer.set({ callback: (data) => props.onChange({ ...data }) }) }, [props.onChange]);
     useEffect(() => { observer.set({ options: props.options }) }, [props.options]);
     useEffect(() => { observer.set({ value: props.value }) }, [props.value]);
-    return <div
-        className={props.className}
-        contentEditable={true}
-        ref={ref}
-        style={props.style}
+        return <div
+            contentEditable
+            ref={ref}
+            style={props.style}
+            className={props.className}
     />
 }
