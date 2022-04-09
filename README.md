@@ -19,9 +19,9 @@ import it in your file
  <Mention 
         className={'class for edit box'}      	      	
         onChange={(change)=>'your on change handler'} 
-      	options={[{name:'ABCD', id:1},{name:'XYZ', id:2}]}
+      	options={[{value:'ABCD', id:1},{value:'XYZ', id:2}]}
       	style={'inline style'} 
-      	value={{rawText:"@1erty",mentions:[{name:'qw', id: 1, startIndex: 0, endIndex:1}]}}
+      	value={{rawText:"@1erty",mentions:[{value:'qw', id: 1, startIndex: 0, endIndex:1}]}}
       />
 ```
 
