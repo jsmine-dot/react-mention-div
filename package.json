@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
@@ -61,6 +61,6 @@
     "minify": "^7.0.2"
   },
   "dependencies": {
-    "@jsmine/mention-observer": "^1.0.1"
+    "@jsmine/mention-observer": "^1.0.2"
   }
 }
