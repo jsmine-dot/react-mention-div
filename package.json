@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "babel ./src/index.js --out-dir ./dist --delete-dir-on-start --no-comments",
-    "build:type:development": "babel ./src/index.js --out-dir ./dist --source-maps --copy-files"
+    "build:development": "babel ./src/index.js --out-dir ./dist --source-maps --copy-files"
   },
   "repository": {
     "type": "git",
