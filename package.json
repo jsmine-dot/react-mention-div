@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "React component for user mention",
   "main": "dist/index.js",
   "scripts": {
@@ -30,9 +30,7 @@
     "mention",
     "tag",
     "editable",
-    "twitter",
-    "twttr",
-    "editable"
+    "custom input"
   ],
   "peerDependencies": {
     "react": "^17.0.2",
